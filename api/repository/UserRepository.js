@@ -1,6 +1,7 @@
 const pool = require('./../../config/database.js');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const emailService = require('../../helpers/emailService.js')
 require('dotenv').config();
 
 const User = require('../models/User');
@@ -8,7 +9,7 @@ const User = require('../models/User');
 
 class UserRepository {
     UserLogin(user, callback) {
-        const findQuery = 'SELECT id, name, email, password, contact FROM tbl_users where email = ? AND deleted_at IS NULL LIMIT 1'
+        const findQuery = 'SELECT id, name, email, password, contact, verified FROM tbl_users where email = ? AND deleted_at IS NULL LIMIT 1'
         pool.query(findQuery, [user.email], (err, result) => {
             if(err) {
                 callback(err, null);
@@ -17,7 +18,9 @@ class UserRepository {
                     message: 'Email does not exists',
                     status: 404
                 }, null);
-            } else {
+            } else if (!result[0].verified) {
+                callback({ message: 'Email not verified', status: 401 }, null);
+            }  else {
                 bcrypt.compare(user.password, result[0].password, (err, compareResult) => {
                     if(err) {
                         callback(err, null)
@@ -69,7 +72,14 @@ class UserRepository {
                             if (err) {
                                 callback(err, null);
                             } else {
-                                callback(null, result);
+                                const verificationToken = jwt.sign({ email: user.Email }, process.env.JWT_KEY, { expiresIn: '15m' });
+                                emailService.sendVerificationEmail(user.Email, verificationToken, (emailErr, info) => {
+                                    if (emailErr) {
+                                        callback(emailErr, null);
+                                    } else {
+                                        callback(null, result);
+                                    }
+                                });
                             }
                         });
                     }

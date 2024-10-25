@@ -8,5 +8,6 @@ router.get('/', userController.GetUsers);
 // router.get('/details', userController.UserDetails);
 router.post('/create', checkAuth, userController.CreateUser);
 router.post('/authentication', userController.UserLogin);
+router.get('/verify-email', userController.VerifyEmail);
 
 module.exports = router;

@@ -1,4 +1,5 @@
 
+const jwt = require('jsonwebtoken');
 const userRepository = require('../repository/UserRepository');
 
 
@@ -100,3 +101,26 @@ exports.DeleteUser = (req, res) => {
         }
     });
 };
+
+exports.VerifyEmail = (req, res) => {
+    const token = req.query.token;
+
+    if(!token) {
+        return res.status(400).json({ message: 'Token is missing' });
+    }
+
+    jwt.verify(token, process.env.JWT_KEY, (err, decoded) => {
+        if(err){
+            return res.status(400).json({ message: 'Invalid token' });
+        }
+        
+        const updateQuery = 'UPDATE tbl_users SET verified = 1 where email = ?';
+        pool.query(updateQuery,[decoded.email], (err, result) => {
+            if(err) {
+                res.status(500).json({ message: 'Internal Server Error' });
+            } else {
+                res.status(200).json({ message: 'Email successfully verified' });
+            }
+        });
+    });
+}
